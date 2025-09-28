@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5000;
@@ -26,7 +26,60 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
+        // database collection
+        const coffeeCollection = client.db("coffeeDB").collection("coffee")
 
+        // get api for read data
+        app.get("/coffee", async (req, res) => {
+            const cursor = coffeeCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        // get api for update a specific data
+        app.get("/coffee/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await coffeeCollection.findOne(query);
+            res.send(result);
+        })
+
+        // post api for send data client to server to database
+        app.post("/coffee", async (req, res) => {
+            const newCoffee = req.body;
+            console.log(newCoffee);
+            const result = await coffeeCollection.insertOne(newCoffee);
+            res.send(result);
+        })
+
+        // put api for update data from client to server and database
+        app.put("/coffee/:id", async(req, res) => {
+            const id = req.params.id;
+            const updateCoffee = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const coffee = {
+                $set: {
+                    name: updateCoffee.name,
+                    price: updateCoffee.price,
+                    supplier: updateCoffee.supplier,
+                    taste: updateCoffee.taste,
+                    category: updateCoffee.category,
+                    details: updateCoffee.details,
+                    photo: updateCoffee.photo,
+                },
+            }
+            const result = await coffeeCollection.updateOne(filter,coffee,options)
+            res.send(result);
+        })
+
+        // delete api for delete data from database
+        app.delete("/coffee/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await coffeeCollection.deleteOne(query);
+            res.send(result);
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
